@@ -12,9 +12,13 @@ import 'package:cat304/screens/signin_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:cat304/noti.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:camera/camera.dart';
+import 'dart:math' as math;
+import 'package:permission_handler/permission_handler.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final List<CameraDescription>? cameras;
+  const SignUpScreen({Key? key, this.cameras}) : super(key: key);
 
   @override
   _SignUpScreenState createState() => _SignUpScreenState();
@@ -28,53 +32,205 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   File? _imageFile;
   bool _agreementChecked = false;
+  late List<CameraDescription> cameras;
+  bool camerasInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.cameras != null) {
+      cameras = widget.cameras!;
+      camerasInitialized = true;
+    } else {
+      initCameras();
+    }
+  }
+
+  Future<void> initCameras() async {
+    try {
+      WidgetsFlutterBinding.ensureInitialized();
+      cameras = await availableCameras();
+      if (mounted) {
+        setState(() {
+          camerasInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('Failed to initialize cameras: $e');
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      
-      if (image != null) {
-        setState(() {
-          _imageFile = File(image.path);
-        });
-        
-        // Show loading indicator
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      // Request camera permission first
+      final status = await Permission.camera.request();
+      if (status.isDenied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Camera permission is required to capture MyKad image')),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Text('Select Image Source', 
+              style: TextStyle(color: Colors.white)),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  ListTile(
+                    leading: Icon(Icons.camera_alt, color: Colors.white),
+                    title: Text('Take Photo', 
+                      style: TextStyle(color: Colors.white)),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        if (!camerasInitialized) {
+                          await initCameras();
+                        }
+                        
+                        if (!camerasInitialized || cameras.isEmpty) {
+                          throw CameraException(
+                            'No cameras available',
+                            'Camera is not initialized or no cameras found.'
+                          );
+                        }
+                        
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CameraScreen(camera: cameras.first),
+                          ),
+                        );
+                        
+                        if (result != null) {
+                          await _handleImageCapture(File(result));
+                        }
+                      } catch (e) {
+                        print('Camera error: $e');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to use camera. Please try using gallery instead.')),
+                        );
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.photo_library, color: Colors.white),
+                    title: Text('Choose from Gallery', 
+                      style: TextStyle(color: Colors.white)),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final ImagePicker picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.gallery
+                      );
+                      if (image != null) {
+                        await _handleImageCapture(File(image.path));
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error accessing camera or gallery. Please try again.')),
+      );
+    }
+  }
+
+  void _showGalleryOnlyDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: Text('Select Image Source', 
+            style: TextStyle(color: Colors.white)),
+          content: ListTile(
+            leading: Icon(Icons.photo_library, color: Colors.white),
+            title: Text('Choose from Gallery', 
+              style: TextStyle(color: Colors.white)),
+            onTap: () async {
+              Navigator.pop(context);
+              final ImagePicker picker = ImagePicker();
+              final XFile? image = await picker.pickImage(
+                source: ImageSource.gallery
+              );
+              if (image != null) {
+                await _handleImageCapture(File(image.path));
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _showImageSourceDialog(CameraDescription camera) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: Text('Select Image Source', 
+            style: TextStyle(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.camera_alt, color: Colors.white),
+                  title: Text('Take Photo', 
+                    style: TextStyle(color: Colors.white)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CameraScreen(camera: camera),
+                        ),
+                      );
+                      
+                      if (result != null) {
+                        await _handleImageCapture(File(result));
+                      }
+                    } catch (e) {
+                      print('Camera error: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to use camera. Please try using gallery instead.')),
+                      );
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.photo_library, color: Colors.white),
+                  title: Text('Choose from Gallery', 
+                    style: TextStyle(color: Colors.white)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery
+                    );
+                    if (image != null) {
+                      await _handleImageCapture(File(image.path));
+                    }
+                  },
+                ),
+              ],
             ),
           ),
         );
-        
-        // Extract MyKad number
-        final extractedNumber = await extractMyKadNumber(_imageFile!);
-        
-        // Hide loading indicator
-        Navigator.pop(context);
-        
-        if (extractedNumber != null) {
-          setState(() {
-            _myKadController.text = extractedNumber;
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not detect MyKad number. Please enter manually.'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (e is PlatformException && e.code == 'already_active') {
-        return;
-      }
-      print('Error picking image: $e');
-    }
+      },
+    );
   }
 
   bool isValidMyKad(String myKad) {
@@ -124,6 +280,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } catch (e) {
       print('Error extracting MyKad number: $e');
       return null;
+    }
+  }
+
+  Future<void> _handleImageCapture(File imageFile) async {
+    setState(() {
+      _imageFile = imageFile;
+      // Clear MyKad field before attempting extraction
+      _myKadController.text = '';
+    });
+    
+    final extractedNumber = await extractMyKadNumber(_imageFile!);
+    if (extractedNumber != null) {
+      setState(() {
+        _myKadController.text = extractedNumber;
+      });
     }
   }
 
@@ -261,6 +432,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 _myKadController,
                 isModern: true,
                 inputType: TextInputType.number,
+                readOnly: true,
               ),
               SizedBox(height: 20),
               reusableTextField(
@@ -269,6 +441,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 false,
                 _nameController,
                 isModern: true,
+                placeholder: "Enter name as shown in MyKad",
               ),
               SizedBox(height: 20),
               reusableTextField(
@@ -305,8 +478,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
-                  width: double.infinity,
-                  height: 150,
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  height: (MediaQuery.of(context).size.width * 0.85) / (8.5 / 5.4),
                   decoration: BoxDecoration(
                     color: Colors.grey[900],
                     borderRadius: BorderRadius.circular(10),
@@ -330,7 +503,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             _imageFile!,
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            height: 150,
+                            height: double.infinity,
                           ),
                         ),
                 ),
@@ -378,6 +551,142 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class MyKadCameraOverlay extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // MyKad aspect ratio is 8.5:5.4 ≈ 1.574
+    final myKadAspectRatio = 8.5 / 5.4;
+    
+    // Get screen dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Calculate frame size based on screen width
+    final frameWidth = screenWidth * 0.85; // Use 85% of screen width
+    final frameHeight = frameWidth / myKadAspectRatio;
+    
+    return Stack(
+      children: [
+        Container(
+          color: Colors.black54,
+          width: screenWidth,
+          height: screenHeight,
+          child: Stack(
+            children: [
+              // Frame for MyKad
+              Positioned(
+                top: screenHeight * 0.3,
+                left: screenWidth * 0.075,
+                child: Container(
+                  width: frameWidth,
+                  height: frameHeight,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+              // Guide text
+              Positioned(
+                bottom: screenHeight * 0.3,
+                left: 0,
+                right: 0,
+                child: Text(
+                  'Align MyKad within the frame',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CameraScreen extends StatefulWidget {
+  final CameraDescription camera;
+
+  const CameraScreen({Key? key, required this.camera}) : super(key: key);
+
+  @override
+  _CameraScreenState createState() => _CameraScreenState();
+}
+
+class _CameraScreenState extends State<CameraScreen> {
+  late CameraController _controller;
+  late Future<void> _initializeControllerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.high,
+    );
+    _initializeControllerFuture = _controller.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: FutureBuilder<void>(
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Stack(
+              children: [
+                CameraPreview(_controller),
+                MyKadCameraOverlay(),
+                Positioned(
+                  bottom: 30,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      FloatingActionButton(
+                        backgroundColor: Colors.white,
+                        child: Icon(Icons.camera_alt, color: Colors.black),
+                        onPressed: () async {
+                          try {
+                            await _initializeControllerFuture;
+                            final image = await _controller.takePicture();
+                            Navigator.pop(context, image.path);
+                          } catch (e) {
+                            print(e);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          } else {
+            return Center(child: CircularProgressIndicator());
+          }
+        },
       ),
     );
   }
