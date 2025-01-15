@@ -11,6 +11,7 @@ import 'package:app_settings/app_settings.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cat304/LocationService/location_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:camera/camera.dart';
 
 
 // Add this at the top level, outside any class
@@ -36,8 +37,16 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     }
   }
 }
+
+List<CameraDescription>? cameras;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    cameras = await availableCameras();
+  } on CameraException catch (e) {
+    print('Error initializing camera: $e');
+  }
   await Firebase.initializeApp();
   
   // Register the background handler
