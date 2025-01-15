@@ -632,6 +632,7 @@ class _CameraScreenState extends State<CameraScreen> {
     _controller = CameraController(
       widget.camera,
       ResolutionPreset.high,
+      enableAudio: false,
     );
     _initializeControllerFuture = _controller.initialize();
   }
