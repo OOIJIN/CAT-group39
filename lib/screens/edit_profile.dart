@@ -10,7 +10,7 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final TextEditingController _nameController = TextEditingController();
+  // final TextEditingController _nameController = TextEditingController();
   // final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
@@ -31,7 +31,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       
       if (userData.exists) {
         setState(() {
-          _nameController.text = userData.data()?['name'] ?? '';
+          // _nameController.text = userData.data()?['name'] ?? '';
           // _emailController.text = userData.data()?['email'] ?? '';
           _phoneController.text = userData.data()?['phone'] ?? '';
           
@@ -49,7 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             .collection('users')
             .doc(user.uid)
             .update({
-          'name': _nameController.text.trim(),
+          // 'name': _nameController.text.trim(),
           'phone': _phoneController.text.trim(),
           // 'email': _emailController.text.trim(),
         });
@@ -102,23 +102,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             //     ),
             //   ),
             // ),
-            SizedBox(height: 20),
-            TextField(
-              controller: _nameController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Name',
-                labelStyle: TextStyle(color: Colors.grey),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
+            // SizedBox(height: 20),
+            // TextField(
+            //   controller: _nameController,
+            //   style: TextStyle(color: Colors.white),
+            //   decoration: InputDecoration(
+            //     labelText: 'Name',
+            //     labelStyle: TextStyle(color: Colors.grey),
+            //     enabledBorder: OutlineInputBorder(
+            //       borderSide: BorderSide(color: Colors.grey),
+            //       borderRadius: BorderRadius.circular(10),
+            //     ),
+            //     focusedBorder: OutlineInputBorder(
+            //       borderSide: BorderSide(color: Colors.green),
+            //       borderRadius: BorderRadius.circular(10),
+            //     ),
+            //   ),
+            // ),
             SizedBox(height: 20),
             TextField(
               controller: _phoneController,
