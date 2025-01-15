@@ -17,12 +17,15 @@ TextField reusableTextField(
     TextEditingController controller, {
     bool isModern = false,
     TextInputType? inputType,
+    bool readOnly = false,
+    String? placeholder,
 }) {
   return TextField(
     controller: controller,
     obscureText: isPasswordType,
     enableSuggestions: !isPasswordType,
     autocorrect: !isPasswordType,
+    readOnly: readOnly,
     keyboardType: inputType ?? (isPasswordType
         ? TextInputType.visiblePassword
         : TextInputType.emailAddress),
@@ -34,6 +37,8 @@ TextField reusableTextField(
       ),
       labelText: text,
       labelStyle: TextStyle(color: Colors.grey),
+      hintText: placeholder,
+      hintStyle: TextStyle(color: Colors.grey[600]),
       filled: true,
       fillColor: isModern ? Colors.grey[900] : Colors.transparent,
       border: isModern
