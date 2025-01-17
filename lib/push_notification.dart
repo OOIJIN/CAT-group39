@@ -21,6 +21,7 @@ class PushNotification {
       return client.credentials.accessToken.data;
     } catch (e) {
       print('Error getting access token: $e');
+      print('Error loading service account: $e');
       rethrow;
     }
   }
