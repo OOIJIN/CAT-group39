@@ -284,6 +284,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _handleImageCapture(File imageFile) async {
+    // Check file size first (750KB = 750 * 1024 bytes)
+    final int maxSizeInBytes = 750 * 1024;
+    final int fileSize = await imageFile.length();
+    
+    if (fileSize > maxSizeInBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('MyKad image size must be less than 750KB. Please choose a smaller image.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _imageFile = imageFile;
       // Clear MyKad field before attempting extraction
