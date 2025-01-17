@@ -11,6 +11,7 @@ class PushNotification {
   static Future<String> getAccessToken() async {
     try {
       final serviceAccountJson = await rootBundle.loadString('assets/service-account.json');
+      print('Service account loaded: ${serviceAccountJson.substring(0, 100)}...');
       final credentials = ServiceAccountCredentials.fromJson(
         json.decode(serviceAccountJson)
       );
