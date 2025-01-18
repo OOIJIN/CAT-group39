@@ -446,7 +446,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 _myKadController,
                 isModern: true,
                 inputType: TextInputType.number,
-                readOnly: true,
+                readOnly: false,
               ),
               SizedBox(height: 20),
               reusableTextField(
