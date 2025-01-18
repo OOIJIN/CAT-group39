@@ -55,8 +55,8 @@ class AdminPage extends StatelessWidget {
             SizedBox(height: 20),
             _buildDashboardCard(
               context,
-              'Pending Accounts',
-              'Review and manage new user registrations',
+              'Pending Accounts/Suspicious Accounts',
+              'Review new registrations and investigate reported incidents',
               Icons.person_outline,
               () => Navigator.push(
                 context,
